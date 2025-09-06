@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 
 interface LoginFormState {
   email: string;
@@ -12,6 +13,26 @@ const LoginForm: React.FC = () => {
   });
 
   const [error, setError] = useState<string>('');
+  const [message, setMessage] = useState<string>('')
+
+  // attempt to access profile without logging in
+  useEffect(() => {
+    async function retrieveProfile() {
+      try {
+        const response = await axios.get("http://localhost:8080/api/auth/profile")
+
+        if (response.status) {
+          alert(response.data.message)
+          console.log("Already authenticated, redirecting to login page")
+        }
+
+      } catch {
+        console.log("Not authenticated, redirect to login page")
+      }
+    }
+
+    retrieveProfile()
+  }, [])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -28,9 +49,21 @@ const LoginForm: React.FC = () => {
     }
 
     // Simulated login
-    if (email === 'user@example.com' && password === 'password123') {
-      alert('Login successful!');
-      setError('');
+    if (email === "user@example.com" && password === "password123") {  
+      (async () => {
+        const response = await axios.post('http://localhost:8080/api/auth/login', { 
+          "username": email, 
+          "password": password 
+        })
+
+        if (!response.status) {
+          alert(`Fetch Error: ${response.data.message}`)
+        } else {
+          alert(`Message: ${response.data.message}`)
+          setMessage(response.data.message)
+          setError('')
+        }
+      })()
     } else {
       setError('Invalid email or password');
     }
@@ -55,6 +88,7 @@ const LoginForm: React.FC = () => {
       />
       {error && <p>{error}</p>}
       <button type="submit">Login</button>
+      {message && <p>{message}</p>}
     </form>
   );
 };
