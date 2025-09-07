@@ -33,6 +33,7 @@ const RegistrationForm = () => {
             setPassword('');
         } catch (err) {
             console.log("Encountered Registration Error: ", err)
+            setError("Error registering")
         }
 
     })()
