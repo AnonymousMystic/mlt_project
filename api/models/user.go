@@ -1,8 +1,8 @@
 package models
 
 type User struct {
-	Id       int    `json:"id" gorm:"primaryKey"`
-	UserName string `json:"username" gorm:"not null"`
-	Email    string `json:"email" gorm:"not null"`
-	PassHash string `json:"passhash" gorm:"not null"`
+	UuId    string  `json:"uuid" gorm:"primaryKey"`
+	Email   string  `json:"email" gorm:"size:255;uniqueIndex;not null"`
+	Passwrd string  `json:"passwrd" gorm:"size:256;not null"`
+	SessId  *string `json:"sessid" gorm:"size:256"`
 }

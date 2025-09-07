@@ -1,6 +1,8 @@
 package main
 
 import (
+	"golang-server/database"
+	"golang-server/middleware"
 	"golang-server/routes"
 	"log"
 
@@ -8,19 +10,12 @@ import (
 )
 
 func main() {
-	router := gin.Default() // If using Gin
+	// connecting to database
+	database.ConnectDatabase()
+	router := gin.Default()
 
 	// for local debugging purposes
-	router.Use(func(c *gin.Context) {
-		c.Writer.Header().Set("Access-Control-Allow-Origin", "http://localhost:5173")
-		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-		if c.Request.Method == "OPTIONS" {
-			c.AbortWithStatus(204)
-			return
-		}
-		c.Next()
-	})
+	router.Use(middleware.CorsEnablement())
 
 	// register routes and middleware
 	routes.RegisterRoutes(router)

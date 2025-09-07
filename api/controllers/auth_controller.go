@@ -33,18 +33,20 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	fmt.Println(token)
-
-	// securely prepare cookie
+	// token information
 	c.SetCookie(
-		"token", // cookie name
-		token,   // token value
-		3600,    // maxAge in seconds
-		"/",     // path
-		"",      // domain ("" means current domain)
-		true,    // secure (HTTPS only)
-		true,    // httpOnly (not accessible via JS)
+		"token",
+		token,
+		360,
+		"/",
+		"",
+		false,
+		true,
 	)
+
+	c.Header("Set-Cookie", "token="+token+"; Path=/; HttpOnly; Secure; SameSite=None")
+
+	fmt.Println(token)
 
 	c.JSON(http.StatusOK, gin.H{"message": "successfully logged in"})
 }

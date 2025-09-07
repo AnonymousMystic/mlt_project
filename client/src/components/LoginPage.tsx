@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
 interface LoginFormState {
@@ -14,25 +15,7 @@ const LoginForm: React.FC = () => {
 
   const [error, setError] = useState<string>('');
   const [message, setMessage] = useState<string>('')
-
-  // attempt to access profile without logging in
-  useEffect(() => {
-    async function retrieveProfile() {
-      try {
-        const response = await axios.get("http://localhost:8080/api/auth/profile")
-
-        if (response.status) {
-          alert(response.data.message)
-          console.log("Already authenticated, redirecting to login page")
-        }
-
-      } catch {
-        console.log("Not authenticated, redirect to login page")
-      }
-    }
-
-    retrieveProfile()
-  }, [])
+  const navigate = useNavigate()
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -54,7 +37,10 @@ const LoginForm: React.FC = () => {
         const response = await axios.post('http://localhost:8080/api/auth/login', { 
           "username": email, 
           "password": password 
-        })
+        }, {
+          withCredentials: true
+        }
+      )
 
         if (!response.status) {
           alert(`Fetch Error: ${response.data.message}`)
@@ -62,6 +48,7 @@ const LoginForm: React.FC = () => {
           alert(`Message: ${response.data.message}`)
           setMessage(response.data.message)
           setError('')
+          navigate('/calendar')
         }
       })()
     } else {

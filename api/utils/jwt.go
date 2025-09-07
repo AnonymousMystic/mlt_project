@@ -4,17 +4,22 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
+	"log"
 	"os"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/joho/godotenv"
 )
-
-var jwtSecret = []byte("supersecretkey")
 
 // generates a secret
 func generateSecret() {
 	var err error
+
+	e := godotenv.Load() // Load .env file
+	if e != nil {
+		log.Fatalf("Error loading .env file")
+	}
 
 	key := make([]byte, 32)
 	_, err = rand.Read(key)
@@ -43,7 +48,7 @@ func GenerateToken(userID uint) (string, error) {
 
 	claims := jwt.MapClaims{
 		"user_id": userID,
-		"exp":     time.Now().Add(time.Hour * 24).Unix(), // 1-day expiry
+		"exp":     time.Now().Add(time.Hour).Unix(), // 1-day expiry
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -53,6 +58,13 @@ func GenerateToken(userID uint) (string, error) {
 
 // Validate token and return claims
 func ValidateToken(tokenString string) (*jwt.Token, jwt.MapClaims, error) {
+	jwtSecret, e := base64.StdEncoding.DecodeString(os.Getenv("JWT_SECRET"))
+	fmt.Println(os.Getenv("JWT_SECRET"))
+
+	if e != nil {
+		return nil, nil, e
+	}
+
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		return jwtSecret, nil
 	})

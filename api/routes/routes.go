@@ -10,7 +10,7 @@ func RegisterRoutes(router *gin.Engine) {
 	api := router.Group("/api")
 	{
 		RegisterAuthRoutes(api)
-		router.Use(middleware.JWTAuthMiddleware())
+		api.Use(middleware.JWTAuthMiddleware())
 		RegisterUserRoutes(api)
 	}
 }
