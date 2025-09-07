@@ -21,6 +21,10 @@ const LoginForm: React.FC = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  const handleRegister = () => {
+    navigate('/register')
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -29,54 +33,52 @@ const LoginForm: React.FC = () => {
     if (!email || !password) {
       setError('Please fill in all fields');
       return;
-    }
+    } 
 
-    // Simulated login
-    if (email === "user@example.com" && password === "password123") {  
-      (async () => {
-        const response = await axios.post('http://localhost:8080/api/auth/login', { 
-          "username": email, 
-          "password": password 
-        }, {
-          withCredentials: true
-        }
-      )
+    (async () => {
+      const response = await axios.post('http://localhost:8080/api/auth/login', { 
+        "username": email, 
+        "password": password 
+      }, {
+        withCredentials: true
+      }
+    )
 
-        if (!response.status) {
-          alert(`Fetch Error: ${response.data.message}`)
-        } else {
-          alert(`Message: ${response.data.message}`)
-          setMessage(response.data.message)
-          setError('')
-          navigate('/calendar')
-        }
-      })()
-    } else {
-      setError('Invalid email or password');
-    }
+      if (!response.status) {
+        alert(`Fetch Error: ${response.data.message}`)
+        setError('Invalid email or password');
+      } else {
+        setMessage(response.data.message)
+        setError('')
+        navigate('/calendar')
+      }
+    })()
   };
 
   return (
-    <form onSubmit={handleSubmit}>
-      <h2>Login</h2>
-      <input
-        type="email"
-        name="email"
-        placeholder="Email"
-        value={formData.email}
-        onChange={handleChange}
-      />
-      <input
-        type="password"
-        name="password"
-        placeholder="Password"
-        value={formData.password}
-        onChange={handleChange}
-      />
-      {error && <p>{error}</p>}
-      <button type="submit">Login</button>
-      {message && <p>{message}</p>}
-    </form>
+    <>
+      <form onSubmit={handleSubmit}>
+        <h2>Login</h2>
+        <input
+          type="email"
+          name="email"
+          placeholder="Email"
+          value={formData.email}
+          onChange={handleChange}
+        />
+        <input
+          type="password"
+          name="password"
+          placeholder="Password"
+          value={formData.password}
+          onChange={handleChange}
+        />
+        {error && <p>{error}</p>}
+        <button type="submit">Login</button>
+        {message && <p>{message}</p>}
+      </form>
+      <button onClick={handleRegister}>Register Now!</button>
+    </>
   );
 };
 
