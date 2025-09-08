@@ -71,6 +71,11 @@ func ValidateToken(tokenString string) (*jwt.Token, jwt.MapClaims, error) {
 		return jwtSecret, nil
 	})
 
+	// invalid token
+	if token == nil || err != nil {
+		return nil, nil, err
+	}
+
 	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
 		return token, claims, nil
 	}
@@ -79,11 +84,11 @@ func ValidateToken(tokenString string) (*jwt.Token, jwt.MapClaims, error) {
 }
 
 // Generate cookies for tokens
-func GenerateCookie(tokenString string, name string, c *gin.Context) {
+func GenerateCookie(tokenString string, name string, seconds int, c *gin.Context) {
 	c.SetCookie(
 		name,
 		tokenString,
-		360,
+		seconds,
 		"/",
 		"",
 		false,

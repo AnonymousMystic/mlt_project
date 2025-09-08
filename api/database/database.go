@@ -49,22 +49,21 @@ func ConnectDatabase() {
 
 // for authenticating trusted users
 func FindUserWithUUID(uuid string) (string, error) {
+	var userId *string
 	if len(uuid) == 0 {
 		return "", errors.New("no existing session")
 	}
-
-	var results *string
 
 	query := fmt.Sprintf(`
 		SELECT uuid from Users
 		WHERE uuid = '%s'
 	`, uuid)
 
-	mssdb.Raw(query).Scan(&results)
+	mssdb.Raw(query).Scan(&userId)
 
 	// check if user is found
-	if results != nil {
-		return *results, nil
+	if userId != nil {
+		return *userId, nil
 	}
 	return "", errors.New("invalid Credentials")
 }
@@ -94,21 +93,20 @@ func FindUserWithCredentials(email string, passwrd string) (utils.QueryUserIdRes
 
 // for checking for existing users
 func FindUserWithUsername(email string) (bool, error) {
+	var uuid *string
 	if len(email) == 0 {
 		return false, errors.New("not a valid input")
 	}
-
-	var results *string
 
 	query := fmt.Sprintf(`
 		SELECT uuid from Users
 		WHERE email = '%s'
 	`, email)
 
-	mssdb.Raw(query).Scan(&results)
+	mssdb.Raw(query).Scan(&uuid)
 
 	// check if user is found
-	if results == nil {
+	if uuid == nil {
 		return false, nil
 	}
 
@@ -142,7 +140,7 @@ func AddNewUser(email string, passwrd string) (string, string, error) {
 
 // creates a session in the database
 func CreateSession(sessid string, id string) error {
-	if len(id) == 0 {
+	if len(id) == 0 || len(sessid) == 0 {
 		return errors.New("invalid id")
 	}
 
@@ -175,16 +173,78 @@ func RetrieveSession(sessid string) (time.Time, error) {
 
 	// try to find existing session
 	query := fmt.Sprintf(`
-		SELECT sessiond_date FROM UserSessions
-		WHERE sessionid = %s
+		SELECT session_date FROM UserSessions
+		WHERE sessionid = '%s'
 	`, sessid)
 
 	status := mssdb.Raw(query).Scan(&sessionDate)
 
-	if status.Error != nil {
+	if status.Error != nil || sessionDate != nil {
 		log.Fatalf("Insert failed: %v", status.Error)
 		return time.Time{}, status.Error
 	}
 
 	return *sessionDate, nil
+}
+
+// access associated user using session information
+func FindUserFromSession(sessid string) (string, error) {
+	var uuid *string
+
+	if len(sessid) == 0 {
+		return "", errors.New("no existing session")
+	}
+
+	// try to find existing session
+	query := fmt.Sprintf(`
+		SELECT uuid FROM UserSessions
+		WHERE sessionid = '%s'
+	`, sessid)
+
+	status := mssdb.Raw(query).Scan(&uuid)
+
+	if status.Error != nil {
+		log.Fatalf("Insert failed: %v", status.Error)
+		return "", status.Error
+	}
+
+	return *uuid, nil
+}
+
+// invalidate and remove a session
+func RemoveAndInvalidateSession(sessid string) error {
+	var uuid *string
+	if len(sessid) == 0 {
+		return errors.New("no existing session")
+	}
+
+	removalQuery := fmt.Sprintf(`
+		DELETE FROM UserSessions
+		OUTPUT DELETED.uuid
+		WHERE sessionid = '%s';
+	`, sessid)
+
+	removalStatus := mssdb.Raw(removalQuery).Scan(&uuid)
+
+	// handle session removal query errors
+	if removalStatus.Error != nil || uuid == nil {
+		log.Fatalf("Removal failed: %v", removalStatus.Error)
+		return removalStatus.Error
+	}
+
+	invalidationQuery := fmt.Sprintf(`
+		UPDATE Users
+		SET sessid = NULL
+		WHERE uuid = '%s';
+	`, *uuid)
+
+	invalidationStatus := mssdb.Exec(invalidationQuery)
+
+	// handle session invalidation query errors
+	if invalidationStatus.Error != nil {
+		log.Fatalf("Invalidation failed: %v", invalidationStatus.Error)
+		return removalStatus.Error
+	}
+
+	return nil
 }

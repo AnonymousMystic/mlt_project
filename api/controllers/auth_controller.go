@@ -8,11 +8,13 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 // handle login control
 func LoginHandler(c *gin.Context) {
 	var input utils.LoginInput
+	var sessid string
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -21,8 +23,14 @@ func LoginHandler(c *gin.Context) {
 	// hash the password for comparison
 	hashPaswrd := sha256.Sum256([]byte(input.Password))
 
-	// try and find the user in the database
+	// try and find the user in the database using their provided credentials
 	userIds, err := database.FindUserWithCredentials(input.Username, hex.EncodeToString(hashPaswrd[:]))
+
+	if len(userIds.Sessid) == 0 {
+		sessid = uuid.New().String()
+	} else {
+		sessid = userIds.Sessid
+	}
 
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
@@ -30,7 +38,7 @@ func LoginHandler(c *gin.Context) {
 	}
 
 	// add session token to database
-	err = database.CreateSession(userIds.Sessid, userIds.Id)
+	err = database.CreateSession(sessid, userIds.Id)
 
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err})
@@ -39,14 +47,15 @@ func LoginHandler(c *gin.Context) {
 
 	// generate a jwt
 	jwtToken, err := utils.GenerateJWT(userIds.Id, c)
+	print(err == nil)
 
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err})
 		return
 	}
 
-	utils.GenerateCookie(jwtToken, "token", c)
-	utils.GenerateCookie(userIds.Sessid, "session_token", c)
+	utils.GenerateCookie(jwtToken, "token", 360, c)
+	utils.GenerateCookie(userIds.Sessid, "session_token", 8640, c)
 	c.JSON(http.StatusOK, gin.H{"message": "successfully logged in"})
 }
 
@@ -93,7 +102,27 @@ func RegisterHandler(c *gin.Context) {
 		return
 	}
 	// cookie generation and notification
-	utils.GenerateCookie(jwtToken, "token", c)
-	utils.GenerateCookie(sessid, "session_token", c)
+	utils.GenerateCookie(jwtToken, "token", 3600, c)
+	utils.GenerateCookie(sessid, "session_token", 86400, c)
 	c.JSON(http.StatusOK, gin.H{"message": "successfully logged in"})
+}
+
+func LogoutHandler(c *gin.Context) {
+	// extract session token
+	sessId, err := c.Cookie("session_token")
+
+	if len(sessId) == 0 && err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "could not extract session token"})
+		return
+	}
+
+	// revoke session token
+	err = database.RemoveAndInvalidateSession(sessId)
+
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "could not revoke session token"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "successfully logged out"})
 }

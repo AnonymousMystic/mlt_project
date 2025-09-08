@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
@@ -16,6 +16,29 @@ const LoginForm: React.FC = () => {
   const [error, setError] = useState<string>('');
   const [message, setMessage] = useState<string>('')
   const navigate = useNavigate()
+
+    // attempt to access profile with tokens
+    useEffect(() => {
+        async function retrieveCalendar() {
+        try {
+            const response = await axios.get("http://localhost:8080/api/user/profile", 
+                {
+                    withCredentials: true
+                }
+            )
+
+            if (response.status) {
+                console.log("Already authenticated, redirecting to profile page")
+                navigate('/calendar')
+            }
+
+        } catch (error) {
+            console.log("Not authenticated, please log in:", error)
+        }
+      }
+
+      retrieveCalendar()
+    }, [])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
