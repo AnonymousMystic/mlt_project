@@ -9,5 +9,6 @@ import (
 func RegisterUserRoutes(group *gin.RouterGroup) {
 	user := group.Group("/user")
 
+	// TODO: retrieve calendar information
 	user.GET("/profile", controllers.Profile)
 }

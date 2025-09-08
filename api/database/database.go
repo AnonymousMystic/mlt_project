@@ -3,9 +3,11 @@ package database
 import (
 	"errors"
 	"fmt"
+	"golang-server/utils"
 	"log"
 	"os"
 	"sync"
+	"time"
 
 	"github.com/joho/godotenv"
 
@@ -47,6 +49,10 @@ func ConnectDatabase() {
 
 // for authenticating trusted users
 func FindUserWithUUID(uuid string) (string, error) {
+	if len(uuid) == 0 {
+		return "", errors.New("no existing session")
+	}
+
 	var results *string
 
 	query := fmt.Sprintf(`
@@ -64,11 +70,15 @@ func FindUserWithUUID(uuid string) (string, error) {
 }
 
 // for authenticating untrusted users
-func FindUserWithCredentials(email string, passwrd string) (string, error) {
-	var results *string
+func FindUserWithCredentials(email string, passwrd string) (utils.QueryUserIdResults, error) {
+	if len(email) == 0 || len(passwrd) == 0 {
+		return utils.QueryUserIdResults{}, errors.New("no existing session")
+	}
+
+	var results *utils.QueryUserIdResults
 
 	query := fmt.Sprintf(`
-		SELECT uuid from Users
+		SELECT uuid, sessid from Users
 		WHERE email = '%s' AND passwrd = '%s'
 	`, email, passwrd)
 
@@ -79,25 +89,102 @@ func FindUserWithCredentials(email string, passwrd string) (string, error) {
 		return *results, nil
 	}
 
-	return "", errors.New("invalid Credentials")
+	return (utils.QueryUserIdResults{}), errors.New("invalid credentials")
+}
+
+// for checking for existing users
+func FindUserWithUsername(email string) (bool, error) {
+	if len(email) == 0 {
+		return false, errors.New("not a valid input")
+	}
+
+	var results *string
+
+	query := fmt.Sprintf(`
+		SELECT uuid from Users
+		WHERE email = '%s'
+	`, email)
+
+	mssdb.Raw(query).Scan(&results)
+
+	// check if user is found
+	if results == nil {
+		return false, nil
+	}
+
+	return true, errors.New("invalid credentials")
 }
 
 // for authenticating newly registered users
-func AddNewUser(email string, passwrd string) (string, error) {
-	uuid := uuid.New().String()
+func AddNewUser(email string, passwrd string) (string, string, error) {
+	if len(email) == 0 || len(passwrd) == 0 {
+		return "", "", errors.New("no existing session")
+	}
+
+	id := uuid.New().String()
+	sessid := uuid.New().String()
 
 	query := fmt.Sprintf(`
 		INSERT INTO Users
 		VALUES('%s', '%s', '%s', '%s')
-	`, uuid, email, passwrd, "")
+	`, id, email, passwrd, sessid)
 
 	status := mssdb.Exec(query)
 
 	// handle query errors
 	if status.Error != nil {
 		log.Fatalf("Insert failed: %v", status.Error)
-		return "", status.Error
+		return "", "", status.Error
 	}
 
-	return uuid, nil
+	return id, sessid, nil
+}
+
+// creates a session in the database
+func CreateSession(sessid string, id string) error {
+	if len(id) == 0 {
+		return errors.New("invalid id")
+	}
+
+	// generate session information
+	issueDate := time.Now()
+	sqlDateTime := issueDate.Format("2006-01-02 15:04:05")
+
+	query := fmt.Sprintf(`
+		INSERT INTO UserSessions
+		VALUES('%s', '%s', '%s')
+	`, sessid, id, sqlDateTime)
+
+	status := mssdb.Exec(query)
+
+	if status.Error != nil {
+		log.Fatalf("Insert failed: %v", status.Error)
+		return status.Error
+	}
+
+	return nil
+}
+
+// retrieves a session if it exists
+func RetrieveSession(sessid string) (time.Time, error) {
+	var sessionDate *time.Time
+
+	if len(sessid) == 0 {
+		return time.Time{}, errors.New("no existing session")
+	}
+
+	// try to find existing session
+	query := fmt.Sprintf(`
+		SELECT sessiond_date FROM UserSessions
+		WHERE sessionid = %s
+	`, sessid)
+
+	status := mssdb.Raw(query).Scan(&sessionDate)
+
+	if status.Error != nil {
+		log.Fatalf("Insert failed: %v", status.Error)
+		return time.Time{}, status.Error
+	}
+
+	return *sessionDate, nil
 }

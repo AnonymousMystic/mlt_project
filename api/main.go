@@ -6,7 +6,7 @@ import (
 	"golang-server/routes"
 	"log"
 
-	"github.com/gin-gonic/gin" // If using Gin
+	"github.com/gin-gonic/gin"
 )
 
 func main() {
@@ -17,8 +17,9 @@ func main() {
 	// for local debugging purposes
 	router.Use(middleware.CorsEnablement())
 
-	// register routes and middleware
+	// register routes and running JWT middleware
 	routes.RegisterRoutes(router)
 
-	log.Fatal(router.Run(":8080")) // Start the server on port 8080
+	// Start the server on port 8080
+	log.Fatal(router.Run(":8080"))
 }

@@ -23,8 +23,7 @@ const RegistrationForm = () => {
 
             // check for valid registration
             if (!response.status) {
-                alert("error registering")
-                setError("Error registering")
+                setError(response.request.error)
             } else {
                 setError('')
                 navigate('/calendar')

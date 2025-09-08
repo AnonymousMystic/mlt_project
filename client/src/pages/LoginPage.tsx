@@ -34,25 +34,28 @@ const LoginForm: React.FC = () => {
       setError('Please fill in all fields');
       return;
     } 
+    try {
+      (async () => {
+        const response = await axios.post('http://localhost:8080/api/auth/login', { 
+          "username": email, 
+          "password": password 
+        }, {
+          withCredentials: true
+        }
+      )
 
-    (async () => {
-      const response = await axios.post('http://localhost:8080/api/auth/login', { 
-        "username": email, 
-        "password": password 
-      }, {
-        withCredentials: true
-      }
-    )
-
-      if (!response.status) {
-        alert(`Fetch Error: ${response.data.message}`)
-        setError('Invalid email or password');
-      } else {
-        setMessage(response.data.message)
-        setError('')
-        navigate('/calendar')
-      }
-    })()
+        if (!response.status) {
+          alert(`Fetch Error: ${response.data.message}`)
+          setError('Invalid email or password');
+        } else {
+          setMessage(response.data.message)
+          setError('')
+          navigate('/calendar')
+        }
+      })()
+    } catch (error) {
+      console.log(error)
+    }
   };
 
   return (
