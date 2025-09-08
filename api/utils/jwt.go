@@ -8,6 +8,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/joho/godotenv"
 )
@@ -74,4 +75,19 @@ func ValidateToken(tokenString string) (*jwt.Token, jwt.MapClaims, error) {
 	}
 
 	return nil, nil, err
+}
+
+// Generate cookies for JWT
+func GenerateCookie(tokenString string, c *gin.Context) {
+	c.SetCookie(
+		"token",
+		tokenString,
+		360,
+		"/",
+		"",
+		false,
+		true,
+	)
+
+	c.Header("Set-Cookie", "token="+tokenString+"; Path=/; HttpOnly; Secure; SameSite=None")
 }
